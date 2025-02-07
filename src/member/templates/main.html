@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+
+{% include "base.html" %}
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RESTful API Example</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .auth-buttons a {
+      text-decoration: none;
+      padding: 10px 15px;
+      margin-left: 10px;
+      background-color: blue;
+      color: white;
+      border-radius: 5px;
+      font-size: 14px;
+    }
+    .auth-buttons a:hover {
+      background-color: darkblue;
+    }
+    .category {
+      margin-bottom: 20px;
+    }
+    .category h2 {
+      margin-bottom: 10px;
+    }
+    .skills button {
+      margin: 5px;
+      padding: 10px;
+      background-color: gray;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .skills button.selected {
+      background-color: blue;
+    }
+    .results {
+      margin-top: 20px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+    .user {
+      border: 1px solid #ccc;
+      border-radius: 10px;
+      padding: 15px;
+      width: 250px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      text-align: center;
+      transition: transform 0.2s;
+      background-color: #f9f9f9;
+    }
+    .user:hover {
+      transform: scale(1.05);
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+    }
+    .user img {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      margin-bottom: 10px;
+    }
+    .user h3 {
+      margin: 10px 0;
+    }
+    .user p {
+      font-size: 14px;
+      color: #555;
+    }
+  </style>
+  
+</head>
+<body>
+  
+
+  <div id="categories"></div>
+  <button id="search-btn" style="margin-top: 20px; padding: 10px;">Search Users</button>
+  <div class="results" id="results"></div>
+
+<script>
+// 기존 자바스크립트 코드 유지
+
+const categoriesDiv = document.getElementById("categories");
+const resultsDiv = document.getElementById("results");
+const searchBtn = document.getElementById("search-btn");
+
+// State for selected skills
+let selectedSkills = [];
+
+// Fetch categories and skills from API
+async function fetchCategories() {
+  try {
+    const response = await fetch("api/categories/");
+    const categories = await response.json();
+    renderCategories_skils(categories);
+  } catch (error) {
+    console.error("Error fetching categories:", error);
+  }
+}
+
+// Render categories and skills
+function renderCategories_skils(categories) {
+  categoriesDiv.innerHTML = "";
+  categories.forEach((category) => {
+    const categoryDiv = document.createElement("div");
+    categoryDiv.className = "category";
+
+    const title = document.createElement("h2");
+    title.textContent = category.name;
+
+    const skillsDiv = document.createElement("div");
+    skillsDiv.className = "skills";
+
+    category.skills.forEach((skill) => {
+      const button = document.createElement("button");
+      button.textContent = skill.name;
+      button.dataset.skillId = skill.id;
+
+      // Toggle selection
+      button.addEventListener("click", () => {
+        const skillId = parseInt(button.dataset.skillId, 10);
+        if (selectedSkills.includes(skillId)) {
+          selectedSkills = selectedSkills.filter((id) => id !== skillId);
+          button.classList.remove("selected");
+        } else {
+          selectedSkills.push(skillId);
+          button.classList.add("selected");
+        }
+      });
+
+      skillsDiv.appendChild(button);
+    });
+
+    categoryDiv.appendChild(title);
+    categoryDiv.appendChild(skillsDiv);
+    categoriesDiv.appendChild(categoryDiv);
+  });
+}
+
+// Fetch users based on selected skills
+async function fetchUsers() {
+  if (selectedSkills.length === 0) {
+    alert("Please select at least one skill!");
+    return;
+  }
+
+  try {
+    const params = new URLSearchParams();
+    selectedSkills.forEach((skillId) => params.append("skills", skillId));
+
+    const response = await fetch(`api/search-users/?${params.toString()}`);
+    const users = await response.json();
+    renderUsers(users);
+  } catch (error) {
+    console.error("Error fetching users:", error);
+  }
+}
+
+function renderUsers(users) {
+  resultsDiv.innerHTML = "<h2>Users</h2>";
+  if (users.length === 0) {
+    resultsDiv.innerHTML += "<p>No users found.</p>";
+    return;
+  }
+
+  users.forEach((user) => {
+    const userDiv = document.createElement("div");
+    userDiv.className = "user";
+
+    const profilePicture = document.createElement("img");
+    if (user.profile_picture) {
+      profilePicture.src = user.profile_picture;
+      profilePicture.alt = `${user.username}'s profile picture`;
+    } else {
+      profilePicture.src = "https://via.placeholder.com/80";
+      profilePicture.alt = "Default profile picture";
+    }
+
+    const username = document.createElement("h3");
+    username.textContent = user.username;
+
+    const bio = document.createElement("p");
+    bio.textContent = user.bio;
+
+    // 클릭 이벤트로 개인 페이지로 이동
+    userDiv.addEventListener("click", () => {
+      window.location.href = `/member/users/${user.id}/`;
+    });
+
+    userDiv.appendChild(profilePicture);
+    userDiv.appendChild(username);
+    userDiv.appendChild(bio);
+    resultsDiv.appendChild(userDiv);
+  });
+}
+
+// Initial fetch
+fetchCategories();
+
+// Add event listener to Search button
+searchBtn.addEventListener("click", fetchUsers);
+</script>
+
+</body>
+</html>

@@ -1,0 +1,38 @@
+<head>
+    <style>
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+          }
+          .auth-buttons a {
+            text-decoration: none;
+            padding: 10px 15px;
+            margin-left: 10px;
+            background-color: blue;
+            color: white;
+            border-radius: 5px;
+            font-size: 14px;
+          }
+          .auth-buttons a:hover {
+            background-color: darkblue;
+          }
+    </style>
+</head>
+
+<body>
+    <!-- Header with login/logout buttons -->
+  <div class="header">
+    <h1>Category and Skills</h1>
+    <div class="auth-buttons">
+      {% if not user.is_authenticated %}
+        <a href="/accounts/login/">Login</a>
+        <a href="/accounts/signup/">Register</a>
+      {% endif %}
+      {% if user.is_authenticated %}
+        <a href="/accounts/logout/">Logout</a>
+      {% endif %}
+    </div>
+  </div>
+</body>

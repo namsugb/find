@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>멘토 찾기</title>
+
+    <style>
+        /* 전체 페이지 스타일 */
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f8f9fa;
+            text-align: center;
+        }
+
+        /* 네비게이션 바 */
+        .navbar {
+            background-color: #2c3e50;
+            padding: 15px;
+            text-align: right;
+        }
+        .navbar a {
+            color: white;
+            text-decoration: none;
+            margin: 0 15px;
+            font-size: 16px;
+        }
+        .navbar a:hover {
+            text-decoration: underline;
+        }
+
+        /* 컨테이너 정렬 */
+        .container {
+            width: 90%;
+            max-width: 600px;
+            margin: 30px auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        /* 검색 입력 및 버튼 */
+        input, button {
+            width: 90%;
+            padding: 12px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+
+        button {
+            background-color: #27ae60;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #218c54;
+        }
+
+        /* 검색 결과 스타일 */
+        .results {
+            margin-top: 20px;
+        }
+
+        /* 채널 카드 스타일 */
+        .channel {
+            display: flex;
+            align-items: center;
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px auto;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .channel img {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            border: 2px solid #ddd;
+            margin-right: 15px;
+        }
+
+        .channel div {
+            text-align: left;
+            flex-grow: 1;
+        }
+
+        .channel h3 {
+            margin: 0;
+            font-size: 18px;
+            color: #333;
+        }
+
+        .channel a {
+            display: inline-block;
+            padding: 8px 12px;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+
+        .channel a:hover {
+            background-color: #0056b3;
+        }
+
+        .error {
+            color: red;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 네비게이션 바 -->
+    <div class="navbar">
+        <a href="{% url 'main' %}">채널 추가하기</a>
+    </div>
+
+    <!-- 컨테이너 -->
+    <div class="container">
+        <h2>🔍 채널을 찾아보세요!</h2>
+        
+        
+        <!-- 검색 입력 -->
+        <label for="tech">공부하고 싶은 기술을 검색하세요:</label>
+        <input type="text" id="tech" placeholder="ex) Python, 데이터베이스.." required>
+        <button id="search-btn">Search</button>
+
+        <!-- 검색 결과 -->
+        <div id="channel-list" class="results"></div>
+    </div>
+
+    <script>
+        // 검색 버튼 클릭 이벤트
+        document.getElementById("search-btn").addEventListener("click", async function(event) {
+            event.preventDefault();
+            const tech = document.getElementById("tech").value.trim();
+            const channelList = document.getElementById("channel-list");
+
+            channelList.innerHTML = ""; // 이전 결과 초기화
+
+            if (!tech) {
+                channelList.innerHTML = `<p class="error">❌ 검색어를 입력해주세요.</p>`;
+                return;
+            }
+
+            try {
+                const csrfToken = getCSRFToken();
+                if (!csrfToken) {
+                    console.error("CSRF Token not found!");
+                    channelList.innerHTML = `<p class="error">CSRF 토큰이 필요합니다.</p>`;
+                    return;
+                }
+
+                const response = await fetch("/api/search-channel/", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRFToken": csrfToken
+                    },
+                    body: JSON.stringify({ tech: tech })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    channelList.innerHTML = `<p class="error">❌ 오류: ${errorData.error || "검색 중 문제가 발생했습니다."}</p>`;
+                } else {
+                    const channels = await response.json();
+                    if (channels.length === 0) {
+                        channelList.innerHTML = `<p>😔 해당 기술과 관련된 채널이 없습니다.</p>`;
+                    } else {
+                        channels.forEach(channel => {
+                            const channelDiv = document.createElement("div");
+                            channelDiv.classList.add("channel");
+
+                            const profileImage = document.createElement("img");
+                            profileImage.src = channel.profile_image_url || "https://via.placeholder.com/100";
+                            profileImage.alt = `${channel.title} Profile Image`;
+
+                            const channelInfo = document.createElement("div");
+                            const channelTitle = document.createElement("h3");
+                            channelTitle.textContent = channel.title;
+
+                            const channelLink = document.createElement("a");
+                            channelLink.href = `https://www.youtube.com/channel/${channel.channel_id}`;
+                            channelLink.target = "_blank";
+                            channelLink.textContent = "채널 방문하기";
+
+                            channelInfo.appendChild(channelTitle);
+                            channelInfo.appendChild(channelLink);
+                            channelDiv.appendChild(profileImage);
+                            channelDiv.appendChild(channelInfo);
+                            channelList.appendChild(channelDiv);
+                        });
+                    }
+                }
+            } catch (error) {
+                channelList.innerHTML = `<p class="error">❌ 오류: ${error.message}</p>`;
+            }
+        });
+
+        // CSRF 토큰 가져오는 함수
+        function getCSRFToken() {
+            const cookies = document.cookie.split(";");
+            for (let cookie of cookies) {
+                const [name, value] = cookie.trim().split("=");
+                if (name === "csrftoken") {
+                    return value;
+                }
+            }
+            return null;
+        }
+    </script>
+</body>
+</html>

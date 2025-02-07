@@ -1,0 +1,9 @@
+
+*.pyc
+.venv/
+# PyCache 제거
+__pycache__/
+# 환경 설정 파일 제외
+.env
+# IDE 설정 파일 제외
+.vscode/

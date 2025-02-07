@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+{% include "base.html" %}
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f9;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .header h1 {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+        .header p {
+            font-size: 1.2em;
+            color: #555;
+        }
+        #add-skill-container {
+            background: #e8f5e9;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            border: 1px solid #a5d6a7;
+        }
+        #add-skill-container select,
+        #add-skill-container button {
+            font-size: 16px;
+            margin-right: 10px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        #add-skill-container button {
+            background-color: #4caf50;
+            color: white;
+            border: none;
+        }
+        #add-skill-container button:hover {
+            background-color: #388e3c;
+        }
+        #skills-container {
+            margin-top: 20px;
+        }
+        .skills-group {
+            margin-bottom: 20px;
+        }
+        .skills-group h2 {
+            font-size: 1.5em;
+            margin-bottom: 10px;
+            color: #2c3e50;
+        }
+        .skill-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #f9f9f9;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+        .skill-item a {
+            text-decoration: none;
+            color: #2e7d32;
+        }
+        .skill-item a:hover {
+            text-decoration: underline;
+        }
+        .skill-item button {
+            background-color: #4caf50;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .skill-item button:hover {
+            background-color: #388e3c;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 id="username"></h1>
+            <p id="bio"></p>
+        </div>
+
+        <!-- 카테고리 및 기술 추가 UI -->
+        {% if is_owner %}
+        <div id="add-skill-container">
+            <h2>추가할 기술</h2>
+            <select id="category-select">
+                <option value="">카테고리 선택</option>
+            </select>
+            <select id="skill-select" disabled>
+                <option value="">기술 선택</option>
+            </select>
+            <button id="add-skill-btn" disabled>추가</button>
+        </div>
+        {% endif %}
+
+        <!-- 카테고리별 기술 목록 -->
+        <div id="skills-container"></div>
+    </div>
+
+    <script>
+        const userId = window.location.pathname.split('/').filter(Boolean).pop();
+        const categorySelect = document.getElementById('category-select');
+        const skillSelect = document.getElementById('skill-select');
+        const addSkillBtn = document.getElementById('add-skill-btn');
+        const skillsContainer = document.getElementById('skills-container');
+
+        fetch(`/member/api/users/${userId}/`)
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('username').textContent = data.username;
+                document.getElementById('bio').textContent = data.bio;
+                renderUserSkills(data.skills);
+            })
+            .catch(error => console.error("Error fetching user details:", error));
+
+        fetch('/member/api/categories/')
+            .then(response => response.json())
+            .then(categories => renderCategories(categories))
+            .catch(error => console.error("Error fetching categories:", error));
+
+        function renderCategories(categories) {
+            categories.forEach(category => {
+                const option = document.createElement('option');
+                option.value = category.id;
+                option.textContent = category.name;
+                categorySelect.appendChild(option);
+            });
+        }
+
+        categorySelect.addEventListener('change', () => {
+            skillSelect.innerHTML = '<option value="">기술 선택</option>';
+            const categoryId = categorySelect.value;
+            if (categoryId) {
+                fetch(`/member/api/categories/${categoryId}/skills/`)
+                    .then(response => response.json())
+                    .then(skills => {
+                        skills.forEach(skill => {
+                            const option = document.createElement('option');
+                            option.value = skill.id;
+                            option.textContent = skill.name;
+                            skillSelect.appendChild(option);
+                        });
+                        skillSelect.disabled = false;
+                        addSkillBtn.disabled = true;
+                    })
+                    .catch(error => console.error("Error fetching skills:", error));
+            } else {
+                skillSelect.disabled = true;
+                addSkillBtn.disabled = true;
+            }
+        });
+
+        skillSelect.addEventListener('change', () => {
+            addSkillBtn.disabled = !skillSelect.value;
+        });
+
+        addSkillBtn.addEventListener('click', () => {
+            const skillId = skillSelect.value;
+            fetch(`/member/api/users/${userId}/add-skill/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCSRFToken()
+                },
+                body: JSON.stringify({ skill_id: skillId })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    alert('Skill added successfully!');
+                    renderUserSkills(data.skills);
+                })
+                .catch(error => console.error("Error adding skill:", error));
+        });
+
+        function renderUserSkills(skills) {
+            skillsContainer.innerHTML = '';
+            const groupedSkills = groupSkillsByCategory(skills);
+            for (const [categoryName, skills] of Object.entries(groupedSkills)) {
+                const categoryDiv = document.createElement('div');
+                categoryDiv.classList.add('skills-group');
+                categoryDiv.innerHTML = `<h2>${categoryName}</h2>`;
+                skills.forEach(skill => {
+                    const skillDiv = document.createElement('div');
+                    skillDiv.classList.add('skill-item');
+                    const skillLink = document.createElement('a');
+                    skillLink.textContent = skill.name;
+                    skillLink.href = `/member/users/${userId}/skills/${skill.id}/resources/`;
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.textContent = '삭제';
+                    deleteBtn.addEventListener('click', () => {
+                        if (confirm(`"${skill.name}" 기술을 삭제하시겠습니까?`)) {
+                            deleteSkill(skill.id);
+                        }
+                    });
+                    skillDiv.appendChild(skillLink);
+                    skillDiv.appendChild(deleteBtn);
+                    categoryDiv.appendChild(skillDiv);
+                });
+                skillsContainer.appendChild(categoryDiv);
+            }
+        }
+
+        function groupSkillsByCategory(skills) {
+            return skills.reduce((groups, skill) => {
+                const category = skill.category;
+                if (!groups[category]) {
+                    groups[category] = [];
+                }
+                groups[category].push(skill);
+                return groups;
+            }, {});
+        }
+
+        function deleteSkill(skillId) {
+            fetch(`/member/api/users/${userId}/remove-skill/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCSRFToken()
+                },
+                body: JSON.stringify({ skill_id: skillId })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    alert('Skill removed successfully!');
+                    renderUserSkills(data.skills);
+                })
+                .catch(error => console.error("Error removing skill:", error));
+        }
+
+        function getCSRFToken() {
+            const cookies = document.cookie.split(';');
+            for (let cookie of cookies) {
+                const [name, value] = cookie.trim().split('=');
+                if (name === 'csrftoken') return value;
+            }
+            return null;
+        }
+    </script>
+</body>
+</html>

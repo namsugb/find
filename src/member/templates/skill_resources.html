@@ -1,0 +1,188 @@
+
+{% include "base.html" %}
+<head>
+    <title>Skill Resources</title>
+
+    <style>
+        #resources {
+            margin-top: 20px;
+        }
+
+        .resource {
+            margin-bottom: 20px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        .resource h3 {
+            margin-top: 0;
+        }
+
+        .resource a {
+            display: inline-block;
+            margin-top: 10px;
+            color: #007bff;
+        }
+
+        .resource a:hover {
+            text-decoration: none;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="resources">
+        <h2>Resources</h2>
+        {% if is_owner %}
+            <div id="add-resource-container">
+                <input id="resource-title" type="text" placeholder="Resource Title">
+                <input id="resource-description" type="text" placeholder="Resource Description">
+                <input id="resource-link" type="url" placeholder="Resource Link">
+                <button id="add-resource-btn">Add Resource</button>
+            </div>
+        {% endif %}
+
+        <div id="resource-list"></div>
+ 
+
+
+    </div>
+
+    <script>
+        // URL에서 userId와 skillId 추출
+        const path = window.location.pathname.split('/').filter(Boolean);
+        const userId = path[2]; // 'users/2/skills/...'에서 '2' 추출
+        const skillId = path[4]; // 'skills/2/resources/'에서 '2' 추출
+    
+        // 페이지 로드 후 데이터 요청
+        document.addEventListener("DOMContentLoaded", () => {
+            console.log("Extracted userId:", userId); // 디버깅: userId 확인
+            console.log("Extracted skillId:", skillId); // 디버깅: skillId 확인
+    
+            fetch(`/member/api/users/${userId}/skills/${skillId}/resources/`)
+                .then(response => {
+                    console.log("Response status:", response.status); // 응답 상태 확인
+                    if (!response.ok) {
+                        throw new Error("Failed to fetch resources");
+                    }
+                    return response.json();
+                })
+                .then(resources => {
+                    console.log("Fetched resources:", resources); // 서버에서 받은 데이터 확인
+                    renderResources(resources); // 데이터 렌더링
+                })
+                .catch(error => console.error("Error fetching resources:", error));
+        });
+    
+        // 데이터 렌더링 함수
+        function renderResources(resources) {
+            const resourceList = document.getElementById('resource-list');
+            if (!resourceList) {
+                console.error("Error: Element with ID 'resource-list' not found.");
+                return;
+            }
+        
+            resourceList.innerHTML = ''; // 기존 내용 초기화
+        
+            if (resources.length === 0) {
+                resourceList.innerHTML = "<p>No resources found.</p>";
+                return;
+            }
+        
+            resources.forEach(resource => {
+                const resourceDiv = document.createElement('div');
+                resourceDiv.className = 'resource';
+        
+                const title = document.createElement('h3');
+                title.textContent = resource.title || "Untitled";
+        
+                const description = document.createElement('p');
+                description.textContent = resource.description || "No description provided.";
+        
+                const link = document.createElement('a');
+                link.href = resource.link || "#";
+                link.textContent = "Go to resource";
+        
+                // 삭제 버튼
+                const deleteBtn = document.createElement('button');
+                deleteBtn.textContent = 'x';
+                deleteBtn.className = 'delete-btn';
+                deleteBtn.addEventListener('click', () => {
+                    deleteResource(resource.id);
+                });
+        
+                resourceDiv.appendChild(title);
+                resourceDiv.appendChild(description);
+                resourceDiv.appendChild(link);
+                resourceDiv.appendChild(deleteBtn);
+                resourceList.appendChild(resourceDiv);
+            });
+        
+            console.log("Resources rendered successfully.");
+        }
+        
+
+        document.getElementById('add-resource-btn').addEventListener('click', () => {
+            const title = document.getElementById('resource-title').value.trim();
+            const description = document.getElementById('resource-description').value.trim();
+            const link = document.getElementById('resource-link').value.trim();
+        
+            if (!title || !link) {
+                alert('Title and link are required to add a resource.');
+                return;
+            }
+        
+            fetch(`/member/api/users/${userId}/skills/${skillId}/resources/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCSRFToken() // CSRF 토큰 포함
+                },
+                body: JSON.stringify({ title, description, link })
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Failed to add resource');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    alert('Resource added successfully!');
+                    renderResources(data); // 새롭게 갱신된 자료 목록 렌더링
+                    // 입력 필드 초기화
+                    document.getElementById('resource-title').value = '';
+                    document.getElementById('resource-description').value = '';
+                    document.getElementById('resource-link').value = '';
+                })
+                .catch(error => console.error('Error adding resource:', error));
+        });
+        
+        function deleteResource(resourceId) {
+            if (!confirm('Are you sure you want to delete this resource?')) {
+                return;
+            }
+        
+            fetch(`/member/api/users/${userId}/skills/${skillId}/resources/${resourceId}/`, {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRFToken': getCSRFToken() // CSRF 토큰 포함
+                }
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Failed to delete resource');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    alert('Resource deleted successfully!');
+                    renderResources(data); // 삭제 후 갱신된 자료 목록 렌더링
+                })
+                .catch(error => console.error('Error deleting resource:', error));
+        }
+        
+    </script>
+    
+</body>
