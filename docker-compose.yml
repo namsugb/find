@@ -1,7 +1,7 @@
 version: "3"
 services:
     db:
-        image: postgres:12.2
+        image: postgres:13
         container_name: ps01
         environment:
             POSTGRES_DB: db
@@ -11,14 +11,16 @@ services:
     web:
         build: .
         container_name: dg01
-        command: bash -c "
-            /src/wait-for-it.sh db:5432 -- &&
-            python3 manage.py collectstatic --no-input &&
-            python3 manage.py makemigrations && 
-            python3 manage.py migrate && 
-            gunicorn config.wsgi:application -b 0:8000"
+        command: >
+          bash -c "
+          /src/wait-for-it.sh db:5432 -- &&
+          python3 manage.py collectstatic --no-input &&
+          python3 manage.py makemigrations &&
+          python3 manage.py migrate &&
+          gunicorn devlearnshare_project.wsgi:application --bind 0.0.0.0:8000 --workers=4 --timeout=120"
         depends_on:
             - db
+
         volumes:
             - ./src:/src
             - ./wait-for-it.sh:/src/wait-for-it.sh

@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 
 from pathlib import Path
 
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -25,7 +26,7 @@ SECRET_KEY = 'django-insecure-0w*!%gyyz5zfq=4qc08!yoq$=ti)yv0gx9*st9=i3@1uw2o)xg
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['13.54.73.81']
 
 
 # Application definition
@@ -83,10 +84,10 @@ WSGI_APPLICATION = 'devlearnshare_project.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'member',
-        'USER': 'postgres',
-        'PASSWORD': '1234',
-        'HOST': 'localhost',
+        'NAME': 'db',
+        'USER': 'admin',
+        'PASSWORD': 'admin',
+        'HOST': 'db',
         'PORT': '5432',
 
     }
@@ -146,8 +147,10 @@ STATICFILES_DIRS = [
     BASE_DIR / "static",  # 프로젝트 루트의 static 디렉토리
 ]
 
-
 import os
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+
 
 # 프로젝트 루트 디렉토리에 media 폴더를 생성
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
@@ -176,3 +179,6 @@ ACCOUNT_LOGOUT_ON_GET = True  # GET 요청으로 로그아웃
 
 
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+CSRF_TRUSTED_ORIGINS = [
+    "http://13.54.73.81"
+]

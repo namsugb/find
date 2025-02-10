@@ -140,6 +140,15 @@
     </div>
 
     <script>
+	function getCSRFToken() {
+	    const csrfToken = document.cookie.split("; ")
+       		 .find(row => row.startsWith("csrftoken="))
+	        ?.split("=")[1];
+	    return csrfToken || "";
+	}
+	
+	console.log("CSRF Token:", getCSRFToken());
+
         // 관리자용 채널 추가 기능
         const addChannelForm = document.getElementById("add-channel-form");
         if (addChannelForm) {
