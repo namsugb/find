@@ -12,10 +12,16 @@ SearchChannelView == 채널 서치 로직
 
 
 
+
+
 src/scraper/models.py
+
+
 유튜브에서 가져온 데이터 저장한 모델
 
 
 
 src/scraper/services.py
+
+
 유튜브 api를 이용해 데이터 가져오는 코드
